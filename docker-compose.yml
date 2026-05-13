@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: e_book
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: 12345
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d e_book"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: ./server
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      PORT: 5000
+      DB_NAME: e_book
+      DB_USER: user
+      DB_PASSWORD: 12345
+      DB_HOST: db
+      DB_PORT: 5432
+      JWT_SECRET: change_this_secret_in_production
+    volumes:
+      - uploads_data:/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+
+  client:
+    build: ./client
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - app
+
+volumes:
+  postgres_data:
+  uploads_data:
