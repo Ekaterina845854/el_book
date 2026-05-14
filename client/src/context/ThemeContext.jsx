@@ -6,12 +6,18 @@ export const ThemeProvider = ({ children }) => {
   const [darkMode, setDarkMode] = useState(false);
 
   useEffect(() => {
-    const saved = localStorage.getItem('darkMode') === 'true';
-    setDarkMode(saved);
+    try {
+      const saved = localStorage.getItem('darkMode') === 'true';
+      setDarkMode(saved);
+    } catch (e) {
+      // игнорируем ошибки localStorage
+    }
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('darkMode', darkMode);
+    try {
+      localStorage.setItem('darkMode', darkMode);
+    } catch (e) {}
     if (darkMode) {
       document.body.classList.add('dark');
     } else {

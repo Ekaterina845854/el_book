@@ -186,6 +186,7 @@ class CatalogService {
 
     // ── Список всех книг с пагинацией ─────────────────────────────────────────
     async getAllBooks({limit = 10, page = 1, categoryId, sortBy, sortDir, language, yearFrom, yearTo} = {}) {
+        console.log('DEBUG getAllBooks yearFrom:', yearFrom, 'yearTo:', yearTo);
         const offset = (parseInt(page) - 1) * parseInt(limit)
         const baseWhere = {status: 'active'}
         if (categoryId) baseWhere.categoryId = categoryId

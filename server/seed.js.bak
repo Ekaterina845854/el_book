@@ -2,66 +2,38 @@ require('dotenv').config()
 const bcrypt = require('bcrypt')
 const sequelize = require('./db')
 require('./models/models')
-const { User, Category, Book } = require('./models/models')
+const {User, Category, Book} = require('./models/models')
 
 async function seed() {
     await sequelize.authenticate()
-    await sequelize.sync({ alter: true })
+    await sequelize.sync({alter: true})
 
-    // ── Администратор ─────────────────────────────────────────────────────
+    // Администратор
     const hash = await bcrypt.hash('admin123', 5)
     const [admin, adminCreated] = await User.findOrCreate({
-        where: { email: 'admin@library.ru' },
-        defaults: {
-            email: 'admin@library.ru',
-            login: 'admin@library.ru',
-            password: hash,
-            role: 'ADMIN',
-        },
+        where: {email: 'admin@library.ru'},
+        defaults: {email: 'admin@library.ru', login: 'admin@library.ru', password: hash, role: 'ADMIN'},
     })
     console.log(adminCreated ? 'Создан администратор' : 'Администратор уже существует', '—', admin.email)
 
-    // ── Тестовый пользователь ─────────────────────────────────────────────
+    // Тестовый пользователь
     const userHash = await bcrypt.hash('user123', 5)
     const [testUser, userCreated] = await User.findOrCreate({
-        where: { email: 'user@library.ru' },
-        defaults: {
-            email: 'user@library.ru',
-            login: 'user@library.ru',
-            password: userHash,
-            role: 'USER',
-        },
+        where: {email: 'user@library.ru'},
+        defaults: {email: 'user@library.ru', login: 'user@library.ru', password: userHash, role: 'USER'},
     })
     console.log(userCreated ? 'Создан пользователь' : 'Пользователь уже существует', '—', testUser.email)
 
-    // ── Категории ─────────────────────────────────────────────────────────
-    const categoryNames = [
-        'Классика',
-        'Роман',
-        'Детектив',
-        'Фантастика',
-        'Фэнтези',
-        'Поэзия',
-        'Драма',
-        'Приключения',
-        'Научная литература',
-        'История',
-        'Биография',
-    ]
-
+    // Категории (П2: категории каталога)
+    const categoryNames = ['Классика', 'Роман', 'Детектив', 'Фантастика', 'Фэнтези', 'Поэзия', 'Драма', 'Приключения', 'Научная литература', 'История', 'Биография'];
     const categories = {}
     for (const name of categoryNames) {
-        const [cat] = await Category.findOrCreate({ where: { name } })
-        if (!cat) {
-            console.error(`⚠️ Не удалось создать категорию: ${name}`)
-            process.exit(1)
-        }
-        console.log(`DEBUG: категория "${name}" -> ID = ${cat.id}`)
+        const [cat] = await Category.findOrCreate({where: {name}})
         categories[name] = cat
     }
     console.log('Категории:', categoryNames.join(', '))
 
-    // ── Книги (тестовые данные) ───────────────────────────────────────────
+    // Книги (П2/П3: каталог с описанием)
     const books = [
         {
             title: 'Преступление и наказание',
@@ -120,17 +92,15 @@ async function seed() {
         },
     ]
 
-    // ── Создаём книги ─────────────────────────────────────────────────────
     for (const bookData of books) {
         const [book, bookCreated] = await Book.findOrCreate({
-            where: { title: bookData.title },
+            where: {title: bookData.title},
             defaults: bookData,
         })
         console.log(`${bookCreated ? 'Добавлена' : 'Уже есть'}: «${book.title}»`)
     }
 
-    // ── Финал ─────────────────────────────────────────────────────────────
-    console.log('\n Готово!')
+    console.log('\n✅ Готово!')
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
     console.log('Администратор: admin@library.ru / admin123')
     console.log('Пользователь:  user@library.ru  / user123')
@@ -139,7 +109,6 @@ async function seed() {
 }
 
 seed().catch(e => {
-    console.error('❌ Ошибка seed:', e.message)
-    console.error(e.stack)
+    console.error('Ошибка seed:', e.message)
     process.exit(1)
 })

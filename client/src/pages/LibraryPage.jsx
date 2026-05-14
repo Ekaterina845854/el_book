@@ -34,7 +34,7 @@ export default function LibraryPage() {
 
   // Фильтры и сортировка
   const [sortBy, setSortBy] = useState('addedAt')
-  const [sortDir, setSortDir] = useState('DESC')
+  const [sortDir, setSortDir] = useState('ASC')
   const [language, setLanguage] = useState('')
   const [century, setCentury] = useState('all')   // заменили yearFrom/yearTo
   const [categoryId, setCategoryId] = useState('')

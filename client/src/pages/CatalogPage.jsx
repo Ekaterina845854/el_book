@@ -18,7 +18,6 @@ const SORT_OPTIONS = [
   { value: 'createdAt', label: 'По дате добавления' },
   { value: 'title', label: 'По названию' },
   { value: 'author', label: 'По автору' },
-  { value: 'year', label: 'По году' },
   { value: 'rating', label: 'По рейтингу' },
 ]
 
@@ -35,17 +34,21 @@ export default function CatalogPage() {
   const [error, setError] = useState('')
   const [notification, setNotification] = useState('')
 
-  // Фильтры и сортировка
   const [sortBy, setSortBy] = useState('createdAt')
-  const [sortDir, setSortDir] = useState('DESC')
+  const [sortDir, setSortDir] = useState('ASC')
   const [language, setLanguage] = useState('')
-  const [century, setCentury] = useState('all')   // заменяет yearFrom/yearTo
+  const [century, setCentury] = useState('all')
 
-  const [viewMode, setViewMode] = useState(() => localStorage.getItem('catalogView') || 'grid')
+  const [viewMode, setViewMode] = useState(() => {
+    try {
+      return localStorage.getItem('catalogView') || 'grid'
+    } catch {
+      return 'grid'
+    }
+  })
 
   const LIMIT = 12
 
-  // Преобразование века в диапазон годов
   const getYearRangeFromCentury = (century) => {
     switch (century) {
       case 'before17': return { yearFrom: null, yearTo: 1600 }
@@ -71,15 +74,16 @@ export default function CatalogPage() {
     setLoading(true)
     setError('')
     const { yearFrom, yearTo } = getYearRangeFromCentury(century)
+    console.log('FRONTEND DEBUG: century =', century, 'yearFrom =', yearFrom, 'yearTo =', yearTo);
     const filters = { sortBy, sortDir, language, yearFrom, yearTo }
 
     try {
       if (searchQuery.trim()) {
         const data = await catalogApi.search(searchQuery.trim(), filters)
-        const results = data.results || []
-        setBooks(results)
-        setTotal(results.length)
+        setBooks(data.results || [])
+        setTotal(data.results?.length || 0)
       } else {
+        console.log('Filters before API call:', filters);
         const data = await catalogApi.getBooks(selectedGenre || undefined, page, LIMIT, filters)
         setBooks(data.books || [])
         setTotal(data.count || 0)
@@ -132,7 +136,7 @@ export default function CatalogPage() {
 
   function setView(mode) {
     setViewMode(mode)
-    localStorage.setItem('catalogView', mode)
+    try { localStorage.setItem('catalogView', mode) } catch {}
   }
 
   async function handleAdd(bookId) {
@@ -157,7 +161,6 @@ export default function CatalogPage() {
     <div className="page">
       <h1>Каталог книг</h1>
 
-      {/* Поиск */}
       <form className="search-form" onSubmit={handleSearch}>
         <input
           type="text"
@@ -172,7 +175,6 @@ export default function CatalogPage() {
         )}
       </form>
 
-      {/* Панель фильтров и сортировки */}
       <div className="filter-bar">
         <div className="filter-group">
           <label>Сортировка:</label>
@@ -213,8 +215,8 @@ export default function CatalogPage() {
         </div>
 
         <div className="view-toggle">
-          <button className={`view-btn ${viewMode === 'grid' ? 'active' : ''}`} onClick={() => setView('grid')} title="Сетка">Сетка</button>
-          <button className={`view-btn ${viewMode === 'list' ? 'active' : ''}`} onClick={() => setView('list')} title="Список">Список</button>
+          <button className={`view-btn ${viewMode === 'grid' ? 'active' : ''}`} onClick={() => setView('grid')}>Сетка</button>
+          <button className={`view-btn ${viewMode === 'list' ? 'active' : ''}`} onClick={() => setView('list')}>Список</button>
         </div>
       </div>
 
@@ -233,7 +235,7 @@ export default function CatalogPage() {
       ) : (
         <div className="books-list">
           {books.map(book => (
-            <BookCard key={book.id} book={book} isInLibrary={libraryIds.has(book.id)} onAdd={handleAdd} variant="list" />
+            <BookCard key={book.id} book={book} isInLibrary={libraryIds.has(book.id)} onAdd={handleAdd} />
           ))}
         </div>
       )}
