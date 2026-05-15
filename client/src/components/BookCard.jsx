@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 
-export default function BookCard({ book, onAdd, inLibrary, compact }) {
+export default function BookCard({ book, onAdd, inLibrary, isInLibrary, compact }) {
+  const inLib = inLibrary || isInLibrary
   const navigate = useNavigate()
 
   if (compact) {
@@ -23,10 +24,10 @@ export default function BookCard({ book, onAdd, inLibrary, compact }) {
         <span className="book-row-rating">★ {book.rating ? book.rating.toFixed(1) : '—'}</span>
         {onAdd && (
           <button
-            className={`btn btn-sm ${inLibrary ? 'btn-outline' : 'btn-primary'}`}
+            className={`btn btn-sm ${inLib ? 'btn-outline' : 'btn-primary'}`}
             onClick={e => { e.stopPropagation(); onAdd(book.id) }}
           >
-            {inLibrary ? 'В библиотеке' : '+ Добавить'}
+            {inLib ? 'В библиотеке' : '+ Добавить'}
           </button>
         )}
       </div>
@@ -49,10 +50,10 @@ export default function BookCard({ book, onAdd, inLibrary, compact }) {
           <span className="book-rating">★ {book.rating ? book.rating.toFixed(1) : '—'}</span>
           {onAdd && (
             <button
-              className={`btn ${inLibrary ? 'btn-outline' : 'btn-primary'}`}
+              className={`btn ${inLib ? 'btn-outline' : 'btn-primary'}`}
               onClick={e => { e.stopPropagation(); onAdd(book.id) }}
             >
-              {inLibrary ? 'В библиотеке' : '+ Добавить'}
+              {inLib ? 'В библиотеке' : '+ Добавить'}
             </button>
           )}
         </div>

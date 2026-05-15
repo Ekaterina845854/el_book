@@ -22,12 +22,38 @@ const SORT_OPTIONS = [
   { value: 'rating', label: 'По рейтингу' },
 ]
 
+// Коррекция английской раскладки → русскую (частая ошибка при поиске)
+const EN_TO_RU = {
+  q:'й',w:'ц',e:'у',r:'к',t:'е',y:'н',u:'г',i:'ш',o:'щ',p:'з','[':'х',']':'ъ',
+  a:'ф',s:'ы',d:'в',f:'а',g:'п',h:'р',j:'о',k:'л',l:'д',';':'ж',"'":'э',
+  z:'я',x:'ч',c:'с',v:'м',b:'и',n:'т',m:'ь',',':'б','.':'ю',
+}
+function fixLayout(str) {
+  return str.split('').map(c => EN_TO_RU[c.toLowerCase()] !== undefined
+    ? (c === c.toUpperCase() ? EN_TO_RU[c.toLowerCase()].toUpperCase() : EN_TO_RU[c.toLowerCase()])
+    : c
+  ).join('')
+}
+
+// Генерация номеров страниц с многоточиями
+function getPageNumbers(current, total) {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
+  const set = new Set([1, total, current])
+  if (current - 1 > 1) set.add(current - 1)
+  if (current + 1 < total) set.add(current + 1)
+  if (current - 2 > 1) set.add(current - 2)
+  if (current + 2 < total) set.add(current + 2)
+  return [...set].sort((a, b) => a - b)
+}
+
 export default function CatalogPage() {
   const [books, setBooks] = useState([])
   const [genres, setGenres] = useState([])
   const [selectedGenre, setSelectedGenre] = useState('')
   const [search, setSearch] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
+  const [suggestions, setSuggestions] = useState([])
+  const [layoutHint, setLayoutHint] = useState('')
   const [libraryIds, setLibraryIds] = useState(new Set())
   const [page, setPage] = useState(1)
   const [total, setTotal] = useState(0)
@@ -112,9 +138,21 @@ export default function CatalogPage() {
 
     try {
       if (searchQuery.trim()) {
+        setSuggestions([])
+        setLayoutHint('')
         const data = await catalogApi.search(searchQuery.trim(), filters)
-        setBooks(data.results || [])
-        setTotal(data.results?.length || 0)
+        const results = data.results || []
+        setBooks(results)
+        setTotal(results.length)
+
+        if (!data.found) {
+          // Показываем подсказки от бэкенда (fuzzySearch)
+          if (data.suggestions?.length) setSuggestions(data.suggestions)
+
+          // Проверяем, не введено ли латиницей вместо кириллицы
+          const fixed = fixLayout(searchQuery.trim())
+          if (fixed !== searchQuery.trim()) setLayoutHint(fixed)
+        }
       } else {
         console.log('Filters before API call:', filters);
         const data = await catalogApi.getBooks(selectedGenre || undefined, page, LIMIT, filters)
@@ -134,6 +172,8 @@ export default function CatalogPage() {
 
   function handleSearch(e) {
     e.preventDefault()
+    setSuggestions([])
+    setLayoutHint('')
     setSearchQuery(search)
     setPage(1)
     setSelectedGenre('')
@@ -142,6 +182,16 @@ export default function CatalogPage() {
   function clearSearch() {
     setSearch('')
     setSearchQuery('')
+    setSuggestions([])
+    setLayoutHint('')
+    setPage(1)
+  }
+
+  function applyCorrection(text) {
+    setSearch(text)
+    setSearchQuery(text)
+    setSuggestions([])
+    setLayoutHint('')
     setPage(1)
   }
 
@@ -213,6 +263,28 @@ export default function CatalogPage() {
         )}
       </form>
 
+      {layoutHint && (
+        <div className="search-hint">
+          Возможно, вы имели в виду (другая раскладка):&nbsp;
+          <button className="search-hint-btn" onClick={() => applyCorrection(layoutHint)}>
+            {layoutHint}
+          </button>
+        </div>
+      )}
+      {suggestions.length > 0 && (
+        <div className="search-suggestions">
+          <span>Похожие запросы:</span>
+          {suggestions.map((s, i) => {
+            const title = s.split(' — ')[0]
+            return (
+              <button key={i} className="suggestion-btn" onClick={() => applyCorrection(title)}>
+                {s}
+              </button>
+            )
+          })}
+        </div>
+      )}
+
       <div className="filter-bar">
         <div className="filter-group">
           <label>Сортировка:</label>
@@ -273,16 +345,40 @@ export default function CatalogPage() {
       ) : (
         <div className="books-list">
           {books.map(book => (
-            <BookCard key={book.id} book={book} isInLibrary={libraryIds.has(book.id)} onAdd={handleAdd} />
+            <BookCard key={book.id} book={book} isInLibrary={libraryIds.has(book.id)} onAdd={handleAdd} compact />
           ))}
         </div>
       )}
 
       {!searchQuery && totalPages > 1 && (
         <div className="pagination">
-          <button disabled={page === 1} onClick={() => setPage(p => p - 1)}>← Предыдущая</button>
-          <span>Страница {page} из {totalPages}</span>
-          <button disabled={page === totalPages} onClick={() => setPage(p => p + 1)}>Следующая →</button>
+          <button
+            className="pagination-btn"
+            disabled={page === 1}
+            onClick={() => setPage(p => p - 1)}
+          >←</button>
+
+          {getPageNumbers(page, totalPages).reduce((acc, num, idx, arr) => {
+            if (idx > 0 && num - arr[idx - 1] > 1) {
+              acc.push(<span key={`dots-${num}`} className="pagination-dots">…</span>)
+            }
+            acc.push(
+              <button
+                key={num}
+                className={`pagination-btn${num === page ? ' active' : ''}`}
+                onClick={() => setPage(num)}
+              >
+                {num}
+              </button>
+            )
+            return acc
+          }, [])}
+
+          <button
+            className="pagination-btn"
+            disabled={page === totalPages}
+            onClick={() => setPage(p => p + 1)}
+          >→</button>
         </div>
       )}
 
