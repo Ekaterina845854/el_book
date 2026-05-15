@@ -331,7 +331,25 @@ body {
   border: 1px solid var(--border);
   border-radius: var(--radius);
 }
-
+/* 🔧 Reader paragraphs & typography */
+.reader-content p {
+  margin: 0 0 1.2em 0;
+  text-indent: 1.5em;
+  text-align: justify;
+  line-height: 1.7;
+}
+.reader-content h2, .reader-content h3 {
+  text-align: center;
+  margin: 1.5em 0 0.8em;
+  font-weight: bold;
+}
+.reader-content blockquote, .reader-content .poem {
+  margin: 1em 2em;
+  font-style: italic;
+  border-left: 3px solid var(--border);
+  padding-left: 1em;
+  color: var(--text-muted);
+}
 /* Subscription */
 .subscription-status {
   display: flex;
@@ -880,4 +898,34 @@ body.dark .plan-card.active,
 body.dark .plan-card:hover {
   border-color: #6366f1 !important;
   box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.3) !important;
+}
+body.dark .rating-form,
+body.dark .ratings-section,
+body.dark .rating-item,
+body.dark .my-rating {
+  background: #1e293b !important;
+  border-color: #475569 !important;
+  color: #e2e8f0 !important;
+}
+body.dark .rating-form h3,
+body.dark .rating-form label,
+body.dark .rating-item p,
+body.dark .my-rating p {
+  color: #e2e8f0 !important;
+}
+body.dark .rating-form textarea,
+body.dark .rating-form input[type="text"],
+body.dark .rating-form input[type="number"] {
+  background: #0f172a !important;
+  color: #e2e8f0 !important;
+  border-color: #475569 !important;
+}
+body.dark .radio-option {
+  color: #e2e8f0 !important;
+}
+body.dark .star {
+  color: #64748b !important;
+}
+body.dark .star.active {
+  color: #f59e0b !important;
 }

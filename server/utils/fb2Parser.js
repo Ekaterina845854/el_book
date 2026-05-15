@@ -1,131 +1,144 @@
-const { XMLParser } = require('fast-xml-parser')
+// server/utils/fb2Parser.js
+const { XMLParser } = require('fast-xml-parser');
 
-// 🛡 Надежный сборщик текста из любого узла FB2 (рекурсивный, без [] и мусора)
-function extractText(node) {
-    if (!node) return ''
-    if (typeof node === 'string') return node.trim()
-    if (Array.isArray(node)) return node.map(extractText).filter(Boolean).join(' ')
-    if (node['#text']) return node['#text'].trim()
+/**
+ * Парсит FB2 XML в массив HTML-страниц
+ * @param {string} fb2Raw - сырой текст FB2 файла
+ * @param {number} maxChars - примерный лимит символов на страницу
+ * @returns {{ title: string, pages: string[] }}
+ */
+function parseFb2(fb2Raw, maxChars = 1500) {
+  const parser = new XMLParser({
+    ignoreAttributes: false,
+    attributeNamePrefix: '@_',
+    textNodeName: '#text',
+    parseAttributeValue: true,
+    trimValues: true,
+    allowBooleanAttributes: true,
+    parseTagValue: true,
+    removeNSPrefix: true,
+    ignoreDeclaration: true,
+    ignorePiTags: true,
+    // 🔒 Безопасность: отключаем внешние сущности (XXE)
+    processEntities: false,
+    externalEntities: {}
+  });
 
-    let text = ''
-    for (const key of Object.keys(node)) {
-        if (key.startsWith('@_')) continue // пропускаем XML-атрибуты
-        const child = extractText(node[key])
-        if (child) text = text ? text + ' ' + child : child
+  const doc = parser.parse(fb2Raw);
+  const body = doc?.FictionBook?.body;
+  if (!body) return { title: 'Неизвестная книга', pages: ['<p>Ошибка парсинга: тело книги не найдено</p>'] };
+
+  const title = doc?.FictionBook?.description?.titleInfo?.bookTitle || 'Без названия';
+
+  // 1. Рекурсивно собираем блоки текста, сохраняя HTML-теги
+  const blocks = [];
+  function collectBlocks(node) {
+    if (!node) return;
+    if (typeof node === 'string' || typeof node === 'number') {
+      const text = String(node).trim();
+      if (text) blocks.push(text);
+      return;
     }
-    return text.trim()
-}
 
-module.exports = function parseFB2(fb2Content, page = 1) {
-    try {
-        const parser = new XMLParser({
-            ignoreAttributes: false,
-            attributeNamePrefix: '@_',
-            parseAttributeValue: true,
-            trimValues: true,
-            textNodeName: '#text',
-            // Не форсируем массивы в конфиге — обрабатываем их вручную для совместимости
+    const tag = node['#name'] || 'span';
+    const attrs = Object.entries(node)
+      .filter(([k]) => k.startsWith('@_'))
+      .map(([k, v]) => `${k.slice(2)}="${v}"`)
+      .join(' ');
+    const attrStr = attrs ? ` ${attrs}` : '';
+
+    // Пропускаем обёртки section, но заходим внутрь
+    if (tag === 'section') {
+      const children = Object.entries(node)
+        .filter(([k]) => !k.startsWith('@_') && k !== '#text')
+        .flatMap(([_, v]) => (Array.isArray(v) ? v : [v]));
+      children.forEach(collectBlocks);
+      return;
+    }
+
+    // Сохраняем семантические теги
+    if (['p', 'subtitle', 'poem', 'stanza', 'text-author', 'empty-line'].includes(tag)) {
+      if (tag === 'empty-line') {
+        blocks.push('<br>');
+        return;
+      }
+      const inner = Object.entries(node)
+        .filter(([k]) => !k.startsWith('@_') && k !== '#text')
+        .flatMap(([_, v]) => (Array.isArray(v) ? v : [v]))
+        .map(n => {
+          if (typeof n === 'string') return n;
+          if (n['#name']) return `<${n['#name']}>${n['#text'] || ''}</${n['#name']}>`;
+          return n;
         })
-
-        const doc = parser.parse(fb2Content)
-        const bodies = doc?.FictionBook?.body
-        if (!bodies) return { pages: ['<p>Содержимое книги не найдено</p>'], totalPages: 1, currentPage: 1, content: '' }
-
-        const blocks = []
-        const bodyArray = Array.isArray(bodies) ? bodies : [bodies]
-
-        for (const body of bodyArray) {
-            const sections = Array.isArray(body?.section) ? body.section : (body?.section ? [body.section] : [])
-
-            for (const section of sections) {
-                // 1. Заголовок
-                if (section?.title) {
-                    const t = extractText(section.title)
-                    if (t && t.length > 2) blocks.push({ type: 'h2', content: t })
-                }
-
-                // 2. Пустая строка-разделитель
-                if (section?.['empty-line']) blocks.push({ type: 'br', content: '' })
-
-                // 3. Абзацы (основной текст)
-                if (section?.p) {
-                    const paragraphs = Array.isArray(section.p) ? section.p : [section.p]
-                    for (const p of paragraphs) {
-                        const txt = extractText(p)
-                        // Фильтр: убираем пустые строки, одинокие сноски [], слишком короткие обрывки
-                        if (txt && txt.length > 5 && !/^\[.*\]$/.test(txt)) {
-                            blocks.push({ type: 'p', content: txt.replace(/\n+/g, '<br/>') })
-                        }
-                    }
-                }
-
-                // 4. Эпиграфы / цитаты
-                if (section?.epigraph) {
-                    const epiArr = Array.isArray(section.epigraph) ? section.epigraph : [section.epigraph]
-                    for (const epi of epiArr) {
-                        const txt = extractText(epi.text || epi)
-                        if (txt && txt.length > 5) blocks.push({ type: 'blockquote', content: txt })
-                    }
-                }
-
-                // 5. Вложенные секции (главы/подзаголовки)
-                if (section?.section) {
-                    const subArr = Array.isArray(section.section) ? section.section : [section.section]
-                    for (const sub of subArr) {
-                        if (sub.title) {
-                            const t = extractText(sub.title)
-                            if (t) blocks.push({ type: 'h3', content: t })
-                        }
-                        if (sub.p) {
-                            const ps = Array.isArray(sub.p) ? sub.p : [sub.p]
-                            for (const p of ps) {
-                                const txt = extractText(p)
-                                if (txt && txt.length > 5 && !/^\[.*\]$/.test(txt)) {
-                                    blocks.push({ type: 'p', content: txt.replace(/\n+/g, '<br/>') })
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        if (blocks.length === 0) {
-            return { pages: ['<p>Текст книги не распознан</p>'], totalPages: 1, currentPage: 1, content: '' }
-        }
-
-        // 📖 Умная пагинация: режем ТОЛЬКО между целыми блоками. Слова и абзацы НЕ рвутся.
-        const pages = []
-        let currentBlocks = []
-        let currentLen = 0
-        const MAX_CHARS_PER_PAGE = 2800
-
-        for (const block of blocks) {
-            const html = block.type === 'br' ? '<br/>' : `<${block.type}>${block.content}</${block.type}>`
-            const len = html.length
-
-            // Если страница не пуста + новый блок не влезает → закрываем текущую
-            if (currentLen > 0 && currentLen + len > MAX_CHARS_PER_PAGE) {
-                pages.push(currentBlocks.join(''))
-                currentBlocks = []
-                currentLen = 0
-            }
-            currentBlocks.push(html)
-            currentLen += len
-        }
-        if (currentBlocks.length > 0) pages.push(currentBlocks.join(''))
-        if (pages.length === 0) pages.push('<p>Ошибка сборки страниц</p>')
-
-        const safePage = Math.max(1, Math.min(page, pages.length))
-
-        return {
-            pages,
-            totalPages: pages.length,
-            currentPage: safePage,
-            content: pages[safePage - 1]
-        }
-    } catch (e) {
-        console.error('[fb2Parser] Критическая ошибка:', e.message, e.stack)
-        return { pages: [`<p>Ошибка загрузки книги: ${e.message}</p>`], totalPages: 1, currentPage: 1, content: '' }
+        .join('');
+      blocks.push(`<${tag}${attrStr}>${inner}</${tag}>`);
+      return;
     }
+
+    // Рекурсия для остальных тегов
+    const children = Object.entries(node)
+      .filter(([k]) => !k.startsWith('@_') && k !== '#text')
+      .flatMap(([_, v]) => (Array.isArray(v) ? v : [v]));
+    children.forEach(collectBlocks);
+  }
+
+  if (body.section) {
+    (Array.isArray(body.section) ? body.section : [body.section]).forEach(collectBlocks);
+  } else {
+    collectBlocks(body);
+  }
+
+  if (blocks.length === 0) return { title, pages: ['<p>Текст книги пуст</p>'] };
+
+  // 2. Умная пагинация: не режем слова и HTML-теги
+  const pages = [];
+  let currentPage = '';
+  let currentLen = 0;
+
+  for (const block of blocks) {
+    // Если блок - тег переноса, просто добавляем
+    if (block === '<br>') {
+      if (currentLen > 0) {
+        currentPage += '<br>';
+        currentLen += 4;
+      }
+      continue;
+    }
+
+    // Если один абзац длиннее лимита, режем его по словам
+    if (block.length > maxChars) {
+      if (currentPage.length > 0) {
+        pages.push(currentPage);
+        currentPage = '';
+        currentLen = 0;
+      }
+      const words = block.replace(/<\/?[^>]+>/g, ' ').split(/\s+/).filter(Boolean);
+      let tempPage = '';
+      let tempLen = 0;
+      for (const word of words) {
+        if (tempLen + word.length > maxChars && tempPage.length > 0) {
+          pages.push(`<p>${tempPage.trim()}</p>`);
+          tempPage = '';
+          tempLen = 0;
+        }
+        tempPage += (tempPage ? ' ' : '') + word;
+        tempLen += word.length + 1;
+      }
+      if (tempPage) currentPage = `<p>${tempPage.trim()}</p>`;
+    } else {
+      // Стандартный абзац помещается целиком
+      if (currentLen + block.length > maxChars && currentPage.length > 0) {
+        pages.push(currentPage);
+        currentPage = '';
+        currentLen = 0;
+      }
+      currentPage += (currentPage ? '\n' : '') + block;
+      currentLen += block.length;
+    }
+  }
+  if (currentPage) pages.push(currentPage);
+
+  return { title, pages: pages.length ? pages : ['<p>Текст пуст</p>'] };
 }
+
+module.exports = { parseFb2 };

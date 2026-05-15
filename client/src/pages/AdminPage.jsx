@@ -1,5 +1,21 @@
+// client/src/pages/AdminPage.jsx
 import { useState, useEffect } from 'react'
 import { adminApi, catalogApi } from '../api'
+
+// 🔧 Форматирование ISBN-13: 9785171036037 → 978-5-17-103603-7
+const formatISBN = (value) => {
+  // Удаляем всё, кроме цифр
+  const digits = value.replace(/\D/g, '')
+  
+  // Форматируем по мере ввода
+  if (digits.length <= 3) return digits
+  if (digits.length <= 4) return `${digits.slice(0, 3)}-${digits.slice(3)}`
+  if (digits.length <= 6) return `${digits.slice(0, 3)}-${digits.slice(3, 4)}-${digits.slice(4)}`
+  if (digits.length <= 12) return `${digits.slice(0, 3)}-${digits.slice(3, 4)}-${digits.slice(4, 6)}-${digits.slice(6)}`
+  
+  // Полная версия: 978-5-17-103603-7
+  return `${digits.slice(0, 3)}-${digits.slice(3, 4)}-${digits.slice(4, 6)}-${digits.slice(6, 12)}-${digits.slice(12)}`
+}
 
 export default function AdminPage() {
   const [categories, setCategories] = useState([])
@@ -27,6 +43,14 @@ export default function AdminPage() {
 
   const handleChange = (e) => {
     const { name, value } = e.target
+    
+    // 🔧 Специальная обработка для ISBN
+    if (name === 'ISBN') {
+      const formatted = formatISBN(value)
+      setForm(prev => ({ ...prev, ISBN: formatted }))
+      return
+    }
+    
     setForm(prev => ({ ...prev, [name]: value }))
   }
 
@@ -46,31 +70,34 @@ export default function AdminPage() {
     try {
       // Создаём FormData для отправки файлов + полей
       const formData = new FormData()
-      
+
       // Текстовые поля
       Object.entries(form).forEach(([key, value]) => {
         if (value !== '' && value !== null && value !== undefined) {
           formData.append(key, value)
         }
       })
-      
+
       // Файлы: имена должны совпадать с multer в upload.js
       if (files.cover) formData.append('cover', files.cover)
       if (files.fb2) formData.append('fb2', files.fb2)
 
       // Отправляем через adminApi.createBook (использует requestForm)
       const result = await adminApi.createBook(formData)
-      
       setMessage(result.message || 'Книга успешно добавлена!')
+      
+      // Сброс формы
       setForm({
         title: '', author: '', year: '', categoryId: '', ISBN: '',
         pages: '', language: 'ru', annotation: '',
       })
       setFiles({ cover: null, fb2: null })
-      
-      // Сбрасываем file inputs
-      document.querySelectorAll('input[type="file"]').forEach(input => input.value = '')
-      
+
+      // Сбрасываем file inputs визуально
+      document.querySelectorAll('input[type="file"]').forEach(input => {
+        input.value = ''
+      })
+
     } catch (err) {
       setError(err.message || 'Ошибка при добавлении книги')
     } finally {
@@ -82,27 +109,27 @@ export default function AdminPage() {
   return (
     <div className="page">
       <h1>Админ-панель: добавить книгу</h1>
-      
+
       {message && <div className="success-msg">{message}</div>}
       {error && <div className="error-msg">{error}</div>}
-      
+
       <form onSubmit={handleSubmit} className="admin-form" encType="multipart/form-data">
         <div className="form-group">
           <label>Название *</label>
           <input type="text" name="title" value={form.title} onChange={handleChange} required />
         </div>
-        
+
         <div className="form-group">
           <label>Автор *</label>
           <input type="text" name="author" value={form.author} onChange={handleChange} required />
         </div>
-        
+
         <div className="form-row">
           <div className="form-group">
             <label>Год</label>
             <input type="number" name="year" value={form.year} onChange={handleChange} min="1000" max="2100" />
           </div>
-          
+
           <div className="form-group">
             <label>Жанр</label>
             <select name="categoryId" value={form.categoryId} onChange={handleChange}>
@@ -113,19 +140,29 @@ export default function AdminPage() {
             </select>
           </div>
         </div>
-        
+
         <div className="form-row">
           <div className="form-group">
             <label>ISBN</label>
-            <input type="text" name="ISBN" value={form.ISBN} onChange={handleChange} placeholder="978-5-04-116640-5" />
+            <input 
+              type="text" 
+              name="ISBN" 
+              value={form.ISBN} 
+              onChange={handleChange} 
+              placeholder="978-5-04-116640-5"
+              maxLength={17}
+            />
+            <small style={{ color: 'var(--text-muted)', display: 'block', marginTop: '4px' }}>
+              Вводите цифры — дефисы добавятся автоматически
+            </small>
           </div>
-          
+
           <div className="form-group">
             <label>Страниц</label>
             <input type="number" name="pages" value={form.pages} onChange={handleChange} min="1" />
           </div>
         </div>
-        
+
         <div className="form-group">
           <label>Язык</label>
           <select name="language" value={form.language} onChange={handleChange}>
@@ -136,24 +173,24 @@ export default function AdminPage() {
             <option value="es">Español</option>
           </select>
         </div>
-        
+
         <div className="form-group">
           <label>Аннотация</label>
           <textarea name="annotation" value={form.annotation} onChange={handleChange} rows="4" />
         </div>
-        
+
         <div className="form-group">
           <label>Обложка (JPG/PNG, макс. 10 МБ)</label>
           <input type="file" name="cover" accept=".jpg,.jpeg,.png,.webp" onChange={handleFileChange} />
           {files.cover && <small>Выбрано: {files.cover.name}</small>}
         </div>
-        
+
         <div className="form-group">
           <label>Текст книги (FB2)</label>
           <input type="file" name="fb2" accept=".fb2" onChange={handleFileChange} />
           {files.fb2 && <small>Выбрано: {files.fb2.name}</small>}
         </div>
-        
+
         <button type="submit" className="btn btn-primary" disabled={loading}>
           {loading ? 'Загрузка...' : 'Добавить книгу'}
         </button>
