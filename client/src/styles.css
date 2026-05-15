@@ -83,6 +83,8 @@ body {
 .btn-outline:hover:not(:disabled) { background: var(--primary); color: #fff; }
 .btn-danger { background: var(--danger); color: #fff; }
 .btn-danger:hover:not(:disabled) { background: #dc2626; }
+.btn-logout { background: transparent; color: var(--danger); border: 2px solid var(--danger); }
+.btn-logout:hover:not(:disabled) { background: var(--danger); color: #fff; }
 .btn-full { width: 100%; }
 
 /* Layout */
@@ -208,6 +210,8 @@ body {
   background: #ede9fe; color: var(--primary);
   padding: 2px 8px; border-radius: 12px; margin-bottom: 8px;
 }
+.genre-clickable { cursor: pointer; transition: background 0.15s, color 0.15s; }
+.genre-clickable:hover { background: var(--primary); color: #fff; }
 .book-footer { display: flex; justify-content: space-between; align-items: center; }
 .book-rating { font-size: 0.85rem; color: #f59e0b; }
 
@@ -253,6 +257,15 @@ body {
   padding: 16px;
   margin-bottom: 24px;
 }
+.my-rating-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.my-rating-actions { display: flex; gap: 8px; margin-left: auto; }
+.my-rating-comment { margin-top: 10px; color: var(--text-muted); }
+.rating-edit-actions { display: flex; gap: 12px; margin-top: 4px; }
 .ratings-list { display: flex; flex-direction: column; gap: 12px; }
 .rating-item {
   background: var(--surface);

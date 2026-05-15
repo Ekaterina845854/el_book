@@ -19,6 +19,9 @@ export default function BookPage() {
   const [loading, setLoading] = useState(true)
   const [ratingLoading, setRatingLoading] = useState(false)
   const [downloading, setDownloading] = useState(false)
+  const [editingRating, setEditingRating] = useState(false)
+  const [editScore, setEditScore] = useState(0)
+  const [editComment, setEditComment] = useState('')
   const [error, setError] = useState('')
   const [notification, setNotification] = useState('')
 
@@ -44,7 +47,7 @@ export default function BookPage() {
       setIsSubscribed(!!subData.isActive)
 
       const mine = ratingsList.find(r => r.userId === user.id)
-      if (mine) { setMyRating(mine); setScore(mine.score) }
+      if (mine) { setMyRating(mine); setScore(mine.score); setEditScore(mine.score); setEditComment(mine.comment || '') }
     }).catch(err => setError(err.message))
       .finally(() => setLoading(false))
   }, [id, user.id])
@@ -103,6 +106,46 @@ export default function BookPage() {
     }
   }
 
+  async function handleUpdateRating(e) {
+    e.preventDefault()
+    if (!editScore) { showNotification('Выберите оценку'); return }
+    setRatingLoading(true)
+    try {
+      await ratingsApi.update(id, editScore, editComment)
+      const updated = { ...myRating, score: editScore, comment: editComment }
+      setMyRating(updated)
+      setRatings(prev => prev.map(r => r.id === myRating.id ? updated : r))
+      setEditingRating(false)
+      const updatedBook = await catalogApi.getOne(id)
+      setBook(updatedBook)
+      showNotification('Отзыв обновлён')
+    } catch (err) {
+      showNotification(err.message)
+    } finally {
+      setRatingLoading(false)
+    }
+  }
+
+  async function handleDeleteRating() {
+    if (!window.confirm('Удалить ваш отзыв?')) return
+    setRatingLoading(true)
+    try {
+      await ratingsApi.deleteRating(id)
+      setRatings(prev => prev.filter(r => r.id !== myRating.id))
+      setMyRating(null)
+      setScore(0)
+      setEditScore(0)
+      setEditComment('')
+      const updatedBook = await catalogApi.getOne(id)
+      setBook(updatedBook)
+      showNotification('Отзыв удалён')
+    } catch (err) {
+      showNotification(err.message)
+    } finally {
+      setRatingLoading(false)
+    }
+  }
+
   function showNotification(msg) {
     setNotification(msg)
     setTimeout(() => setNotification(''), 3000)
@@ -130,7 +173,15 @@ export default function BookPage() {
           <h1>{book.title}</h1>
           <p className="book-author-large">{book.author}</p>
           {/* book.category — поле из ассоциации Book.belongsTo(Category) */}
-          {book.category && <span className="book-genre">{book.category.name}</span>}
+          {book.category && (
+            <span
+              className="book-genre genre-clickable"
+              title="Смотреть все книги этого жанра"
+              onClick={() => navigate(`/?genre=${book.category.id}`)}
+            >
+              {book.category.name}
+            </span>
+          )}
 
           <div className="book-meta">
             {book.year && <span>Год: {book.year}</span>}
@@ -233,11 +284,58 @@ export default function BookPage() {
           </form>
         )}
 
-        {myRating && (
+        {myRating && !editingRating && (
           <div className="my-rating">
-            <p>Ваша оценка: <StarRating value={myRating.score} readonly /></p>
-            {myRating.comment && <p>{myRating.comment}</p>}
+            <div className="my-rating-header">
+              <span>Ваша оценка:</span>
+              <StarRating value={myRating.score} readonly />
+              <div className="my-rating-actions">
+                <button
+                  className="btn btn-sm btn-outline"
+                  onClick={() => { setEditScore(myRating.score); setEditComment(myRating.comment || ''); setEditingRating(true) }}
+                >
+                  Редактировать
+                </button>
+                <button
+                  className="btn btn-sm btn-danger"
+                  onClick={handleDeleteRating}
+                  disabled={ratingLoading}
+                >
+                  Удалить
+                </button>
+              </div>
+            </div>
+            {myRating.comment && <p className="my-rating-comment">{myRating.comment}</p>}
           </div>
+        )}
+
+        {myRating && editingRating && (
+          <form className="rating-form" onSubmit={handleUpdateRating}>
+            <h3>Редактировать отзыв</h3>
+            <div className="form-group">
+              <label>Ваша оценка</label>
+              <StarRating value={editScore} onChange={setEditScore} />
+            </div>
+            <div className="form-group">
+              <label>Комментарий (необязательно)</label>
+              <textarea
+                value={editComment}
+                onChange={e => setEditComment(e.target.value)}
+                placeholder="Ваше впечатление о книге..."
+                rows={3}
+                maxLength={1000}
+              />
+              <small>{editComment.length}/1000</small>
+            </div>
+            <div className="rating-edit-actions">
+              <button type="submit" className="btn btn-primary" disabled={ratingLoading || !editScore}>
+                {ratingLoading ? 'Сохранение...' : 'Сохранить'}
+              </button>
+              <button type="button" className="btn btn-outline" onClick={() => setEditingRating(false)}>
+                Отмена
+              </button>
+            </div>
+          </form>
         )}
 
         <div className="ratings-list">

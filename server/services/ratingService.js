@@ -27,7 +27,9 @@ class RatingService {
     // ── П8: updateAverageRating(bookId) — SELECT AVG(score) + UPDATE books ───
     async updateAverageRating(bookId) {
         const allRatings = await Rating.findAll({where: {bookId}})
-        const avg = allRatings.reduce((sum, r) => sum + r.score, 0) / allRatings.length
+        const avg = allRatings.length
+            ? allRatings.reduce((sum, r) => sum + r.score, 0) / allRatings.length
+            : 0
         const newRating = Math.round(avg * 10) / 10
         await Book.update({rating: newRating}, {where: {id: bookId}})
         return newRating
@@ -104,6 +106,15 @@ class RatingService {
             order: [['createdAt', 'DESC']],
         })
         return {ratings, bookRating: book.rating}
+    }
+
+    // ── Удаление впечатления ─────────────────────────────────────────────────
+    async deleteReview(userId, bookId) {
+        const existing = await Rating.findOne({where: {userId, bookId}})
+        if (!existing) throw ApiError.notFound('Впечатление не найдено')
+        await existing.destroy()
+        const newRating = await this.updateAverageRating(bookId)
+        return {deleted: true, newBookRating: newRating}
     }
 
     // ── Обновление существующего впечатления ─────────────────────────────────

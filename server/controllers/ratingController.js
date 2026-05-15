@@ -33,6 +33,18 @@ class RatingController {
         }
     }
 
+    // ── DELETE /api/rating/:bookId — удалить своё впечатление ───────────────
+    async deleteReview(req, res, next) {
+        try {
+            const userId = req.user.id
+            const {bookId} = req.params
+            const result = await ratingService.deleteReview(userId, bookId)
+            return res.json(result)
+        } catch (e) {
+            next(e instanceof ApiError ? e : ApiError.internal(e.message))
+        }
+    }
+
     // ── П8: PATCH /api/rating/:bookId — обновить впечатление ─────────────────
     async updateReview(req, res, next) {
         try {

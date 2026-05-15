@@ -168,6 +168,14 @@ export const ratingsApi = {
   // → { rating, newBookRating, message }
   add: (bookId, score, comment) =>
     request(`/rating/${bookId}`, { method: 'POST', body: JSON.stringify({ score, comment }) }),
+
+  // → { rating, newBookRating }
+  update: (bookId, score, comment) =>
+    request(`/rating/${bookId}`, { method: 'PATCH', body: JSON.stringify({ score, comment }) }),
+
+  // → { deleted, newBookRating }
+  deleteRating: (bookId) =>
+    request(`/rating/${bookId}`, { method: 'DELETE' }),
 }
 
 // ── П9: Subscription ──────────────────────────────────────────────────────────

@@ -40,7 +40,7 @@ export default function Navbar() {
         {user ? (
           <>
             <span className="navbar-email">{user.email}</span>
-            <button className="btn btn-outline" onClick={handleLogout}>Выйти</button>
+            <button className="btn btn-logout" onClick={handleLogout}>Выйти</button>
           </>
         ) : (
           <>

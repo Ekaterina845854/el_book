@@ -12,4 +12,7 @@ router.get('/:bookId', authMiddleware, ratingController.getBookRatings)
 // П8: обновить своё впечатление
 router.patch('/:bookId', authMiddleware, ratingController.updateReview)
 
+// удалить своё впечатление
+router.delete('/:bookId', authMiddleware, ratingController.deleteReview)
+
 module.exports = router
