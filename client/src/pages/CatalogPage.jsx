@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { catalogApi, libraryApi } from '../api'
 import BookCard from '../components/BookCard'
 
@@ -47,6 +48,8 @@ export default function CatalogPage() {
     }
   })
 
+  const [searchParams, setSearchParams] = useSearchParams()
+
   const LIMIT = 12
 
   const getYearRangeFromCentury = (century) => {
@@ -60,6 +63,23 @@ export default function CatalogPage() {
       default: return { yearFrom: null, yearTo: null }
     }
   }
+
+  // Инициализация фильтров из URL при первой загрузке
+  useEffect(() => {
+    const urlSortBy = searchParams.get('sortBy')
+    const urlSortDir = searchParams.get('sortDir')
+    const urlLang = searchParams.get('language')
+    const urlCentury = searchParams.get('century')
+    const urlGenre = searchParams.get('genre')
+    const urlPage = searchParams.get('page')
+
+    if (urlSortBy && SORT_OPTIONS.some(o => o.value === urlSortBy)) setSortBy(urlSortBy)
+    if (urlSortDir === 'ASC' || urlSortDir === 'DESC') setSortDir(urlSortDir)
+    if (LANGUAGES.some(l => l.value === urlLang)) setLanguage(urlLang)
+    if (urlCentury) setCentury(urlCentury)
+    if (urlGenre) setSelectedGenre(urlGenre)
+    if (urlPage && !isNaN(parseInt(urlPage))) setPage(parseInt(urlPage))
+  }, [])
 
   useEffect(() => {
     catalogApi.getCategories()
@@ -77,6 +97,19 @@ export default function CatalogPage() {
     console.log('FRONTEND DEBUG: century =', century, 'yearFrom =', yearFrom, 'yearTo =', yearTo);
     const filters = { sortBy, sortDir, language, yearFrom, yearTo }
 
+    // Синхронизируем фильтры с URL
+    const params = new URLSearchParams(searchParams)
+    params.set('sortBy', sortBy)
+    params.set('sortDir', sortDir)
+    if (language) params.set('language', language)
+    else params.delete('language')
+    if (century !== 'all') params.set('century', century)
+    else params.delete('century')
+    if (selectedGenre) params.set('genre', selectedGenre)
+    else params.delete('genre')
+    params.set('page', page)
+    setSearchParams(params, { replace: true })
+
     try {
       if (searchQuery.trim()) {
         const data = await catalogApi.search(searchQuery.trim(), filters)
@@ -93,7 +126,7 @@ export default function CatalogPage() {
     } finally {
       setLoading(false)
     }
-  }, [selectedGenre, page, searchQuery, sortBy, sortDir, language, century])
+  }, [selectedGenre, page, searchQuery, sortBy, sortDir, language, century, searchParams, setSearchParams])
 
   useEffect(() => {
     loadBooks()
@@ -131,6 +164,11 @@ export default function CatalogPage() {
 
   function handleLanguage(val) {
     setLanguage(val)
+    setPage(1)
+  }
+
+  function handleCentury(val) {
+    setCentury(val)
     setPage(1)
   }
 
@@ -203,7 +241,7 @@ export default function CatalogPage() {
 
         <div className="filter-group">
           <label>Век / эпоха:</label>
-          <select value={century} onChange={e => setCentury(e.target.value)}>
+          <select value={century} onChange={e => handleCentury(e.target.value)}>
             <option value="all">Все века</option>
             <option value="before17">До XVII века (до 1600)</option>
             <option value="17">XVII век (1601–1700)</option>

@@ -26,6 +26,7 @@ async function requestForm(path, method, formData) {
   const token = getToken()
   const headers = {}
   if (token) headers['Authorization'] = `Bearer ${token}`
+  // Не устанавливаем Content-Type для FormData — браузер сделает это сам с boundary
 
   const res = await fetch(`${BASE_URL}${path}`, { method, headers, body: formData })
   const contentType = res.headers.get('content-type') || ''
@@ -54,28 +55,37 @@ export const catalogApi = {
   getCategories: () => request('/catalog/categories'),
 
   // П2: getBooksByCategory → { books, count, empty, category }
-  getBooks: (categoryId, page = 1, limit = 12, {sortBy, sortDir, language, yearFrom, yearTo} = {}) => {
-    const params = new URLSearchParams({ page, limit })
-    if (categoryId) params.set('categoryId', categoryId)
+  getBooks: (categoryId, page = 1, limit = 12, { sortBy, sortDir, language, yearFrom, yearTo } = {}) => {
+    const params = new URLSearchParams({ page: String(page), limit: String(limit) })
+    if (categoryId) params.set('categoryId', String(categoryId))
     if (sortBy) params.set('sortBy', sortBy)
     if (sortDir) params.set('sortDir', sortDir)
     if (language) params.set('language', language)
-    if (yearFrom) params.set('yearFrom', yearFrom)
-    if (yearTo) params.set('yearTo', yearTo)
+    // Безопасная отправка годов: только если это валидные числа
+    if (yearFrom != null && yearFrom !== '' && !isNaN(Number(yearFrom))) {
+      params.set('yearFrom', String(yearFrom))
+    }
+    if (yearTo != null && yearTo !== '' && !isNaN(Number(yearTo))) {
+      params.set('yearTo', String(yearTo))
+    }
     return request(`/catalog/books?${params}`)
   },
 
-  // П2: getBookDetails → book object
   getOne: (id) => request(`/catalog/books/${id}`),
 
   // П3: searchBooks → { results, found, message, suggestions }
-  search: (q, {sortBy, sortDir, language, yearFrom, yearTo} = {}) => {
-    const params = new URLSearchParams({ q: encodeURIComponent(q) })
+  search: (q, { sortBy, sortDir, language, yearFrom, yearTo } = {}) => {
+    const params = new URLSearchParams({ q })
     if (sortBy) params.set('sortBy', sortBy)
     if (sortDir) params.set('sortDir', sortDir)
     if (language) params.set('language', language)
-    if (yearFrom) params.set('yearFrom', yearFrom)
-    if (yearTo) params.set('yearTo', yearTo)
+    // Безопасная отправка годов
+    if (yearFrom != null && yearFrom !== '' && !isNaN(Number(yearFrom))) {
+      params.set('yearFrom', String(yearFrom))
+    }
+    if (yearTo != null && yearTo !== '' && !isNaN(Number(yearTo))) {
+      params.set('yearTo', String(yearTo))
+    }
     return request(`/catalog/search?${params}`)
   },
 }
@@ -83,13 +93,18 @@ export const catalogApi = {
 // ── П4/П5: User Library ───────────────────────────────────────────────────────
 export const libraryApi = {
   // П5: getUserLibrary → { books, empty, unavailableIds }
-  getLibrary: ({sortBy, sortDir, language, yearFrom, yearTo, categoryId} = {}) => {
+  getLibrary: ({ sortBy, sortDir, language, yearFrom, yearTo, categoryId } = {}) => {
     const params = new URLSearchParams()
     if (sortBy) params.set('sortBy', sortBy)
     if (sortDir) params.set('sortDir', sortDir)
     if (language) params.set('language', language)
-    if (yearFrom) params.set('yearFrom', yearFrom)
-    if (yearTo) params.set('yearTo', yearTo)
+    // Безопасная отправка годов
+    if (yearFrom != null && yearFrom !== '' && !isNaN(Number(yearFrom))) {
+      params.set('yearFrom', String(yearFrom))
+    }
+    if (yearTo != null && yearTo !== '' && !isNaN(Number(yearTo))) {
+      params.set('yearTo', String(yearTo))
+    }
     if (categoryId) params.set('categoryId', categoryId)
     const qs = params.toString()
     return request(`/library${qs ? '?' + qs : ''}`)
@@ -165,7 +180,7 @@ export const subscriptionApi = {
 export const adminApi = {
   // Получить все книги
   getBooks: (page = 1, limit = 100) =>
-    request(`/catalog/books?page=${page}&limit=${limit}`),
+    request(`/admin/books?page=${page}&limit=${limit}`),
 
   // Получить категории
   getCategories: () => request('/catalog/categories'),
@@ -174,10 +189,10 @@ export const adminApi = {
   createCategory: (name) =>
     request('/catalog/categories', { method: 'POST', body: JSON.stringify({ name }) }),
 
-  // Добавить книгу
+  // Добавить книгу (через FormData)
   createBook: (formData) => requestForm('/admin/books', 'POST', formData),
 
-  // Обновить книгу
+  // Обновить книгу (через FormData)
   updateBook: (id, formData) => requestForm(`/admin/books/${id}`, 'PATCH', formData),
 
   // Удалить книгу (мягкое удаление)
