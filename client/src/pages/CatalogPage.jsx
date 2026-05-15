@@ -202,6 +202,13 @@ export default function CatalogPage() {
     setSearch('')
   }
 
+  function handleAuthorClick(author) {
+    setSearch(author)
+    setSearchQuery(author)
+    setSelectedGenre('')
+    setPage(1)
+  }
+
   function toggleSortDir() {
     setSortDir(d => d === 'DESC' ? 'ASC' : 'DESC')
     setPage(1)
@@ -339,13 +346,15 @@ export default function CatalogPage() {
       ) : viewMode === 'grid' ? (
         <div className="books-grid">
           {books.map(book => (
-            <BookCard key={book.id} book={book} isInLibrary={libraryIds.has(book.id)} onAdd={handleAdd} />
+            <BookCard key={book.id} book={book} isInLibrary={libraryIds.has(book.id)} onAdd={handleAdd}
+              onGenreClick={handleGenreSelect} onAuthorClick={handleAuthorClick} />
           ))}
         </div>
       ) : (
         <div className="books-list">
           {books.map(book => (
-            <BookCard key={book.id} book={book} isInLibrary={libraryIds.has(book.id)} onAdd={handleAdd} compact />
+            <BookCard key={book.id} book={book} isInLibrary={libraryIds.has(book.id)} onAdd={handleAdd} compact
+              onGenreClick={handleGenreSelect} onAuthorClick={handleAuthorClick} />
           ))}
         </div>
       )}

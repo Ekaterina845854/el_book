@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 
-export default function BookCard({ book, onAdd, inLibrary, isInLibrary, compact }) {
+export default function BookCard({ book, onAdd, inLibrary, isInLibrary, compact, onGenreClick, onAuthorClick }) {
   const inLib = inLibrary || isInLibrary
   const navigate = useNavigate()
 
@@ -16,9 +16,17 @@ export default function BookCard({ book, onAdd, inLibrary, isInLibrary, compact 
         <div className="book-row-info">
           <span className="book-row-title">{book.title}</span>
           <div className="book-row-meta">
-            <span className="book-row-author">{book.author}</span>
+            <span
+              className={`book-row-author${onAuthorClick ? ' author-clickable' : ''}`}
+              onClick={onAuthorClick ? e => { e.stopPropagation(); onAuthorClick(book.author) } : undefined}
+            >{book.author}</span>
             {book.year && <span className="book-row-year">{book.year}</span>}
-            {book.category && <span className="book-genre">{book.category.name}</span>}
+            {book.category && (
+              <span
+                className={`book-genre${onGenreClick ? ' genre-clickable' : ''}`}
+                onClick={onGenreClick ? e => { e.stopPropagation(); onGenreClick(book.category.id) } : undefined}
+              >{book.category.name}</span>
+            )}
           </div>
         </div>
         <span className="book-row-rating">★ {book.rating ? book.rating.toFixed(1) : '—'}</span>
@@ -44,8 +52,16 @@ export default function BookCard({ book, onAdd, inLibrary, isInLibrary, compact 
       </div>
       <div className="book-info">
         <h3 className="book-title">{book.title}</h3>
-        <p className="book-author">{book.author}</p>
-        {book.category && <span className="book-genre">{book.category.name}</span>}
+        <p
+          className={`book-author${onAuthorClick ? ' author-clickable' : ''}`}
+          onClick={onAuthorClick ? e => { e.stopPropagation(); onAuthorClick(book.author) } : undefined}
+        >{book.author}</p>
+        {book.category && (
+          <span
+            className={`book-genre${onGenreClick ? ' genre-clickable' : ''}`}
+            onClick={onGenreClick ? e => { e.stopPropagation(); onGenreClick(book.category.id) } : undefined}
+          >{book.category.name}</span>
+        )}
         <div className="book-footer">
           <span className="book-rating">★ {book.rating ? book.rating.toFixed(1) : '—'}</span>
           {onAdd && (

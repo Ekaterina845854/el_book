@@ -205,6 +205,8 @@ body {
 .book-info { padding: 12px; }
 .book-title { font-size: 0.925rem; font-weight: 600; margin-bottom: 4px; line-height: 1.4; }
 .book-author { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 6px; }
+.author-clickable { cursor: pointer; transition: color 0.15s; }
+.author-clickable:hover { color: var(--primary); }
 .book-genre {
   display: inline-block; font-size: 0.75rem;
   background: #ede9fe; color: var(--primary);
@@ -426,21 +428,68 @@ body {
   padding: 4px 12px; border-radius: 12px; font-size: 0.875rem;
 }
 
+/* Admin tabs */
+.admin-tabs {
+  display: flex; gap: 4px; margin-bottom: 24px;
+  border-bottom: 2px solid var(--border); padding-bottom: 0;
+}
+.admin-tab-btn {
+  background: none; border: none; border-bottom: 2px solid transparent;
+  margin-bottom: -2px; padding: 10px 20px; font-size: 0.9rem;
+  color: var(--text-muted); cursor: pointer; border-radius: var(--radius) var(--radius) 0 0;
+  transition: color 0.15s, border-color 0.15s;
+}
+.admin-tab-btn:hover { color: var(--primary); }
+.admin-tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+.admin-tab-count {
+  display: inline-block; background: var(--primary); color: #fff;
+  font-size: 0.7rem; font-weight: 600; border-radius: 10px;
+  padding: 1px 6px; margin-left: 6px; vertical-align: middle;
+}
+
+/* Admin list search */
+.admin-list-search { display: flex; gap: 8px; margin-bottom: 20px; }
+.admin-list-search .search-input { flex: 1; }
+
+/* Admin book list */
 .admin-book-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 8px; }
 .admin-book-item {
-  display: flex; align-items: center; gap: 16px;
+  display: flex; align-items: center; gap: 14px;
   padding: 12px 16px; border: 1px solid var(--border); border-radius: var(--radius);
-  background: var(--background);
+  background: var(--surface); transition: border-color 0.15s;
 }
-.admin-book-item.editing { border-color: var(--primary); background: #f5f3ff; }
-.admin-book-cover { width: 40px; height: 56px; object-fit: cover; border-radius: 4px; flex-shrink: 0; }
-.admin-book-meta { flex: 1; display: flex; flex-direction: column; gap: 2px; }
-.admin-book-meta strong { font-size: 0.95rem; }
-.admin-book-meta span { font-size: 0.82rem; color: var(--text-secondary); }
-.admin-book-actions { display: flex; gap: 8px; flex-shrink: 0; }
+.admin-book-item.deleted { opacity: 0.65; border-style: dashed; }
+.admin-book-cover-wrap { flex-shrink: 0; }
+.admin-book-cover { width: 40px; height: 56px; object-fit: cover; border-radius: 4px; display: block; }
+.admin-book-cover-placeholder {
+  width: 40px; height: 56px; background: var(--border);
+  border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;
+}
+.admin-book-meta { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.admin-book-meta strong { font-size: 0.925rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.admin-book-meta span { font-size: 0.8rem; color: var(--text-muted); }
+.admin-book-right { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex-shrink: 0; }
+.admin-book-actions { display: flex; gap: 8px; }
+
+/* Admin status badge */
+.admin-status-badge {
+  font-size: 0.72rem; font-weight: 600; padding: 2px 8px;
+  border-radius: 10px; text-transform: uppercase; letter-spacing: 0.03em;
+}
+.admin-status-badge.active { background: #dcfce7; color: #16a34a; }
+.admin-status-badge.deleted { background: #fee2e2; color: #dc2626; }
+
+/* Admin edit info */
+.admin-edit-info {
+  font-size: 0.8rem; color: var(--text-muted); margin-bottom: 20px;
+  padding: 8px 12px; background: #f8fafc; border-radius: var(--radius); border: 1px solid var(--border);
+}
+
+/* Auto-detected pages hint */
+.admin-pages-hint { font-size: 0.78rem; color: var(--primary); font-weight: normal; }
 
 .admin-file-uploads { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; margin: 8px 0; }
-.admin-file-uploads .hint { font-size: 0.78rem; color: var(--text-secondary); }
+.admin-file-uploads .hint { font-size: 0.78rem; color: var(--text-muted); }
 .admin-form-actions { display: flex; gap: 12px; margin-top: 8px; }
 
 input[type="file"] {
@@ -557,6 +606,8 @@ input[type="file"] {
 .book-row-title { font-weight: 600; font-size: 0.875rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .book-row-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .book-row-author { font-size: 0.775rem; color: var(--text-muted); }
+.book-row-author.author-clickable { cursor: pointer; transition: color 0.15s; }
+.book-row-author.author-clickable:hover { color: var(--primary); }
 .book-row-year { font-size: 0.75rem; color: var(--text-muted); }
 .book-row-rating { font-size: 0.8rem; color: #f59e0b; white-space: nowrap; }
 
@@ -880,6 +931,7 @@ body.dark .book-title,
 body.dark .book-author {
   color: #e2e8f0 !important;
 }
+body.dark .author-clickable:hover { color: #818cf8 !important; }
 
 /* Фильтры и сортировка в каталоге */
 body.dark .filter-bar,
@@ -1071,6 +1123,7 @@ body.dark .book-row:hover {
 }
 body.dark .book-row-author,
 body.dark .book-row-year { color: #94a3b8 !important; }
+body.dark .book-row-author.author-clickable:hover { color: #818cf8 !important; }
 /* Dark: search hints */
 body.dark .search-hint { color: #94a3b8 !important; }
 body.dark .search-hint-btn { color: #818cf8 !important; }
@@ -1084,3 +1137,24 @@ body.dark .suggestion-btn:hover {
   background: var(--primary) !important;
   color: #fff !important;
 }
+
+/* Dark: admin */
+body.dark .admin-section {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+}
+body.dark .admin-tab-btn { color: #94a3b8 !important; }
+body.dark .admin-tab-btn:hover { color: #818cf8 !important; }
+body.dark .admin-tab-btn.active { color: #818cf8 !important; border-bottom-color: #818cf8 !important; }
+body.dark .admin-tab-count { background: #4f46e5 !important; }
+body.dark .admin-book-item {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+}
+body.dark .admin-book-cover-placeholder { background: #334155 !important; }
+body.dark .admin-book-meta strong { color: #e2e8f0 !important; }
+body.dark .admin-book-meta span { color: #94a3b8 !important; }
+body.dark .admin-status-badge.active { background: #14532d !important; color: #4ade80 !important; }
+body.dark .admin-status-badge.deleted { background: #450a0a !important; color: #f87171 !important; }
+body.dark .admin-edit-info { background: #0f172a !important; border-color: #334155 !important; color: #94a3b8 !important; }
+body.dark .admin-pages-hint { color: #818cf8 !important; }

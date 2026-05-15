@@ -58,6 +58,29 @@ class AdminController {
             next(e instanceof ApiError ? e : ApiError.internal(e.message))
         }
     }
+
+    // ── PATCH /api/admin/books/:id/restore — восстановление удалённой книги ──
+    async restoreBook(req, res, next) {
+        try {
+            const adminId = req.user.id
+            const {id} = req.params
+            const result = await adminService.restoreBook(adminId, id)
+            return res.json(result)
+        } catch (e) {
+            next(e instanceof ApiError ? e : ApiError.internal(e.message))
+        }
+    }
+
+    // ── GET /api/admin/books — список всех книг для администратора ───────────
+    async getBooks(req, res, next) {
+        try {
+            const {page = 1, limit = 20, search = ''} = req.query
+            const result = await adminService.getAdminBooks({page, limit, search})
+            return res.json(result)
+        } catch (e) {
+            next(e instanceof ApiError ? e : ApiError.internal(e.message))
+        }
+    }
 }
 
 module.exports = new AdminController()

@@ -2,16 +2,47 @@ const path = require('path')
 const fs = require('fs')
 const {Book, UserLibrary} = require('../models/models')
 const {ApiError} = require('../middleware/errorHandler')
-const {CHARS_PER_PAGE} = require('../subsystems/bookViewer/bookViewerContracts')
-const parseFb2 = require('../utils/fb2Parser')
+const { parseFb2 } = require('../utils/fb2Parser')
 
 // Кэш распарсенного текста для больших FB2-файлов (per-process, сбрасывается при рестарте)
 const textCache = new Map()
 
+// Нормализует текст из БД или файла в массив HTML-страниц
+function normalizeToPages(raw) {
+    if (Array.isArray(raw)) return raw
+    // Новый формат: JSON-массив страниц
+    if (typeof raw === 'string' && raw.trimStart().startsWith('[')) {
+        try {
+            const parsed = JSON.parse(raw)
+            if (Array.isArray(parsed) && parsed.length > 0) return parsed
+        } catch (_) {}
+    }
+    // Старый формат: плоская строка — разбиваем по абзацам, не разрывая HTML-теги
+    if (typeof raw === 'string' && raw.length > 0) {
+        const {CHARS_PER_PAGE} = require('../subsystems/bookViewer/bookViewerContracts')
+        const pages = []
+        const blocks = raw.split(/\n+/).filter(Boolean)
+        let page = ''
+        for (const block of blocks) {
+            if (page.length + block.length > CHARS_PER_PAGE && page.length > 0) {
+                pages.push(page)
+                page = ''
+            }
+            page += (page ? '\n' : '') + block
+        }
+        if (page) pages.push(page)
+        return pages.length > 0 ? pages : [raw]
+    }
+    return null
+}
+
 class BookViewerService {
-    // ── Получить текст книги: из БД или из файла на диске (для больших FB2) ──
+    // ── Получить страницы книги: из БД или из файла на диске (для больших FB2) ──
     async _getBookText(book) {
-        if (book.text) return book.text
+        if (book.text) {
+            const pages = normalizeToPages(book.text)
+            if (pages) return pages
+        }
         if (textCache.has(book.id)) return textCache.get(book.id)
 
         if (book.fb2Path) {
@@ -19,10 +50,11 @@ class BookViewerService {
             if (fs.existsSync(absPath)) {
                 try {
                     const raw = fs.readFileSync(absPath, 'utf8')
-                    const text = parseFb2(raw)
-                    if (text && text.length > 0) {
-                        textCache.set(book.id, text)
-                        return text
+                    const result = parseFb2(raw)
+                    const pages = result.pages
+                    if (pages && pages.length > 0) {
+                        textCache.set(book.id, pages)
+                        return pages
                     }
                 } catch (e) {
                     console.warn('[BookViewer] Ошибка чтения FB2 с диска:', e.message)
@@ -49,15 +81,14 @@ class BookViewerService {
             throw ApiError.forbidden('Книга удалена из общего каталога. Доступ к тексту ограничен')
         }
 
-        const text = await this._getBookText(book)
-        if (!text) {
+        const pages = await this._getBookText(book)
+        if (!pages) {
             throw ApiError.notFound('Текст книги недоступен. Для онлайн-чтения необходим FB2-файл.')
         }
 
-        const totalPages = Math.ceil(text.length / CHARS_PER_PAGE)
+        const totalPages = pages.length
         const safePage = Math.max(1, Math.min(page, totalPages))
-        const start = (safePage - 1) * CHARS_PER_PAGE
-        const pageContent = text.substring(start, start + CHARS_PER_PAGE)
+        const pageContent = pages[safePage - 1] || ''
 
         return {
             bookId: book.id,
@@ -106,10 +137,9 @@ class BookViewerService {
             attributes: ['id', 'text', 'fb2Path'],
         })
         if (book) {
-            const text = await this._getBookText(book)
-            if (text) {
-                const totalPages = Math.ceil(text.length / CHARS_PER_PAGE)
-                if (parseInt(page) >= totalPages) {
+            const pages = await this._getBookText(book)
+            if (pages) {
+                if (parseInt(page) >= pages.length) {
                     await entry.update({readStatus: 'finished'})
                 }
             }

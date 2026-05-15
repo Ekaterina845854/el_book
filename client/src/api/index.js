@@ -192,9 +192,12 @@ export const subscriptionApi = {
 
 // ── П10: Admin ────────────────────────────────────────────────────────────────
 export const adminApi = {
-  // Получить все книги
-  getBooks: (page = 1, limit = 100) =>
-    request(`/admin/books?page=${page}&limit=${limit}`),
+  // Получить все книги (для списка в админке)
+  getBooks: (page = 1, limit = 20, search = '') => {
+    const params = new URLSearchParams({ page: String(page), limit: String(limit) })
+    if (search) params.set('search', search)
+    return request(`/admin/books?${params}`)
+  },
 
   // Получить категории
   getCategories: () => request('/catalog/categories'),
@@ -211,4 +214,7 @@ export const adminApi = {
 
   // Удалить книгу (мягкое удаление)
   deleteBook: (id) => request(`/admin/books/${id}`, { method: 'DELETE' }),
+
+  // Восстановить удалённую книгу
+  restoreBook: (id) => request(`/admin/books/${id}/restore`, { method: 'PATCH' }),
 }

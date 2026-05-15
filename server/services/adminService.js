@@ -6,7 +6,7 @@ const path = require('path')
 const fs = require('fs')
 const {Book, Category, User} = require('../models/models')
 const {ApiError} = require('../middleware/errorHandler')
-const parseFb2 = require('../utils/fb2Parser')
+const { parseFb2 } = require('../utils/fb2Parser')
 
 // Допустимые форматы обложки — П10 Альт. сценарий 2
 const ALLOWED_COVER_FORMATS = ['.jpg', '.jpeg', '.png', '.webp']
@@ -90,6 +90,7 @@ class AdminService {
         const MAX_INLINE_TEXT_SIZE = 10 * 1024 * 1024 // 10 МБ
 
         let text = null
+        let detectedPages = null
         let fb2Path = null, txtPath = null, docxPath = null, pdfPath = null
 
         if (files?.txt?.[0]) {
@@ -104,9 +105,13 @@ class AdminService {
         }
         if (files?.fb2?.[0]) {
             fb2Path = `uploads/fb2/${files.fb2[0].filename}`
-            if (!text && files.fb2[0].size <= MAX_INLINE_TEXT_SIZE) {
+            if (files.fb2[0].size <= MAX_INLINE_TEXT_SIZE) {
                 try {
-                    text = parseFb2(fs.readFileSync(files.fb2[0].path, 'utf8'))
+                    const raw = fs.readFileSync(files.fb2[0].path, 'utf8')
+                    const result = parseFb2(raw)
+                    // Страницы сохраняются как JSON-массив HTML-блоков
+                    text = JSON.stringify(result.pages)
+                    detectedPages = result.pages.length
                 } catch (e) {
                     console.warn('[AdminService] Ошибка парсинга FB2:', e.message)
                 }
@@ -116,7 +121,7 @@ class AdminService {
         if (files?.docx?.[0]) docxPath = `uploads/docx/${files.docx[0].filename}`
         if (files?.pdf?.[0]) pdfPath = `uploads/pdf/${files.pdf[0].filename}`
 
-        return {text, fb2Path, txtPath, docxPath, pdfPath}
+        return {text, detectedPages, fb2Path, txtPath, docxPath, pdfPath}
     }
 
     // ── П10: indexNewBook(bookId, title, author, category) ───────────────────
@@ -159,11 +164,15 @@ class AdminService {
             year: formData.year ? parseInt(formData.year) : null,
             categoryId: formData.categoryId ? parseInt(formData.categoryId) : null,
             ISBN: formData.ISBN || null,
-            pages: formData.pages ? parseInt(formData.pages) : null,
+            pages: formData.pages ? parseInt(formData.pages) : (textData.detectedPages || null),
             language: ALLOWED_LANGUAGES.includes(formData.language) ? formData.language : 'ru',
             annotation: formData.annotation || null,
             coverUrl,
-            ...textData,
+            text: textData.text,
+            fb2Path: textData.fb2Path,
+            txtPath: textData.txtPath,
+            docxPath: textData.docxPath,
+            pdfPath: textData.pdfPath,
             status: 'active',
         }
 
@@ -242,6 +251,8 @@ class AdminService {
         if (textData.txtPath) updates.txtPath = textData.txtPath
         if (textData.docxPath) updates.docxPath = textData.docxPath
         if (textData.pdfPath) updates.pdfPath = textData.pdfPath
+        // Автозаполнение страниц из FB2, если не указано вручную
+        if (textData.detectedPages && !formData.pages) updates.pages = textData.detectedPages
 
         await book.update(updates)
         return {book, message: 'Книга обновлена'}
@@ -254,6 +265,36 @@ class AdminService {
         if (!book) throw ApiError.notFound('Книга не найдена')
         await book.update({status: 'deleted'})
         return {message: 'Книга удалена из общей библиотеки', bookId}
+    }
+
+    // ── Восстановление удалённой книги ───────────────────────────────────────
+    async restoreBook(adminId, bookId) {
+        await this.validateAdminRights(adminId)
+        const book = await Book.findOne({where: {id: bookId}})
+        if (!book) throw ApiError.notFound('Книга не найдена')
+        await book.update({status: 'active'})
+        return {message: 'Книга восстановлена в каталоге', bookId}
+    }
+
+    // ── Список всех книг для администратора (включая удалённые) ─────────────
+    async getAdminBooks({page = 1, limit = 20, search = ''}) {
+        const {Op} = require('sequelize')
+        const where = {}
+        if (search && search.trim()) {
+            where[Op.or] = [
+                {title: {[Op.iLike]: `%${search.trim()}%`}},
+                {author: {[Op.iLike]: `%${search.trim()}%`}},
+            ]
+        }
+        const offset = (parseInt(page) - 1) * parseInt(limit)
+        const {count, rows} = await Book.findAndCountAll({
+            where,
+            include: [{model: Category, attributes: ['id', 'name']}],
+            order: [['createdAt', 'DESC']],
+            limit: parseInt(limit),
+            offset,
+        })
+        return {books: rows, count, page: parseInt(page), totalPages: Math.ceil(count / parseInt(limit))}
     }
 }
 
