@@ -18,6 +18,12 @@ async function request(path, options = {}) {
   }
 
   const data = await res.json()
+  if (res.status === 429) {
+    const retryAfter = res.headers.get('Retry-After')
+    const minutes = retryAfter ? Math.round(parseInt(retryAfter) / 60) : 15
+    throw new Error(`Слишком много попыток. Попробуйте через ${minutes} мин.`)
+  }
+  
   if (!res.ok) throw new Error(data.message || 'Ошибка запроса')
   return data
 }

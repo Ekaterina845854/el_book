@@ -13,6 +13,8 @@ const app = express()
 
 app.use(cors())
 
+
+
 // Пропускаем multipart запросы мимо express.json()
 app.use((req, res, next) => {
     if (req.is('multipart/form-data')) {
@@ -20,6 +22,18 @@ app.use((req, res, next) => {
     }
     next()
 })
+// 🔒 Rate-limit: защита от перебора паролей
+const rateLimit = require('express-rate-limit')
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,      // 15 минут
+  max: 5,                        // максимум 5 попыток за окно
+  message: { error: 'Слишком много попыток входа. Попробуйте через 15 минут.' },
+  standardHeaders: true,         // вернёт заголовок Retry-After
+  legacyHeaders: false,          // отключит старые X-RateLimit-*
+})
+
+app.use('/api/auth/login', loginLimiter)
 
 app.use(express.json())
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
