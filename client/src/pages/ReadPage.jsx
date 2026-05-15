@@ -16,6 +16,7 @@ export default function ReadPage() {
   const [error, setError] = useState('')
   const [noSubscription, setNoSubscription] = useState(false)
   const contentRef = useRef(null)
+  const isDark = typeof window !== 'undefined' && localStorage.getItem('theme') === 'dark';
 
   // П6 Успешный сценарий: openBook() — открывает на последней странице
   useEffect(() => {
@@ -26,7 +27,7 @@ export default function ReadPage() {
           return
         }
         setTitle(bookData.title)
-        setPageContent(bookData.pageContent)
+        setPageContent(bookData.content || bookData.pageContent || '')
         setCurrentPage(bookData.currentPage)
         setTotalPages(bookData.totalPages)
         setJumpInput(bookData.currentPage)
@@ -52,12 +53,12 @@ export default function ReadPage() {
     setPageLoading(true)
     try {
       const data = await viewerApi.openBook(id, target)
-      setPageContent(data.pageContent)
+      setPageContent(data.content || data.pageContent || '')
       setCurrentPage(data.currentPage)
       setJumpInput(data.currentPage)
       // П6: saveLastPage — сохранить прогресс чтения
       await viewerApi.saveProgress(id, data.currentPage)
-      contentRef.current?.scrollTo(0, 0)
+      if (contentRef.current) contentRef.current.scrollTop = 0
     } catch (err) {
       setError(err.message)
     } finally {
@@ -95,19 +96,27 @@ export default function ReadPage() {
   )
 
   return (
-    <div className="reader-page">
+    <div className={`reader-page ${isDark ? 'dark' : ''}`}>
       <div className="reader-header">
         <button className="btn btn-outline" onClick={() => navigate(-1)}>← Назад</button>
         <h2>{title}</h2>
         <span className="reader-page-info">Страница {currentPage} / {totalPages}</span>
       </div>
 
-      <div className="reader-content" ref={contentRef}>
-        {pageLoading
-          ? <div className="loading">Загрузка страницы...</div>
-          : <p className="reader-text">{pageContent}</p>
-        }
-      </div>
+      <div 
+        className="reader-content" 
+        ref={contentRef}
+        dangerouslySetInnerHTML={{ __html: pageContent }}
+        style={{
+          minHeight: '60vh',
+          padding: '20px 15px',
+          lineHeight: '1.7',
+          fontSize: '18px',
+          color: 'var(--text-color, #1e293b)',
+          background: 'var(--bg-color, #f8fafc)',
+          borderRadius: '8px'
+        }}
+      />
 
       <div className="reader-nav">
         <button
@@ -126,7 +135,7 @@ export default function ReadPage() {
             onChange={e => setJumpInput(e.target.value)}
             onBlur={() => goToPage(parseInt(jumpInput) || 1)}
             onKeyDown={e => e.key === 'Enter' && goToPage(parseInt(jumpInput) || 1)}
-            disabled={pageLoading}
+            style={{ width: '60px', textAlign: 'center', margin: '0 5px' }}
           />
           <span>/ {totalPages}</span>
         </div>
@@ -138,6 +147,70 @@ export default function ReadPage() {
           Следующая →
         </button>
       </div>
+
+      {/* 🔒 Встроенные стили для контента книги */}
+      <style>{`
+        .reader-content p {
+          margin: 0 0 1.2em 0;
+          text-indent: 1.5em;
+          text-align: justify;
+          line-height: 1.6;
+          color: var(--text);
+        }
+        .reader-content h2, .reader-content h3 {
+          text-align: center;
+          margin: 1.5em 0 0.8em;
+          font-weight: bold;
+          color: var(--text);
+        }
+        .reader-content h2 { font-size: 1.6em; }
+        .reader-content h3 { font-size: 1.3em; }
+        .reader-content blockquote {
+          margin: 1em 2em;
+          font-style: italic;
+          border-left: 3px solid var(--border);
+          padding-left: 1em;
+          color: var(--text);
+        }
+        .reader-content .poem {
+          white-space: pre-line;
+          margin: 1em 0;
+        }
+        .reader-content br {
+          display: block;
+          margin: 0.3em 0;
+        }
+        .reader-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 15px;
+          flex-wrap: wrap;
+          gap: 10px;
+        }
+        .reader-nav {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-top: 20px;
+          padding-top: 15px;
+          border-top: 1px solid var(--border);
+        }
+        .reader-page-jump {
+          display: flex;
+          align-items: center;
+          gap: 5px;
+        }
+        .reader-page-info {
+          font-size: 0.9em;
+          opacity: 0.8;
+        }
+        @media (max-width: 600px) {
+          .reader-content { font-size: 16px !important; padding: 15px 10px !important; }
+          .reader-header { flex-direction: column; align-items: flex-start; }
+          .reader-nav { flex-direction: column; gap: 10px; }
+        }
+      `}</style>
     </div>
   )
 }

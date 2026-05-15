@@ -728,3 +728,156 @@ body.dark .theme-toggle {
   overflow-wrap: break-word;
   white-space: normal;
 }
+/* Стили для контента книги */
+.book-content p {
+    margin: 0 0 1em 0;
+    line-height: 1.6;
+    text-indent: 1.5em;
+}
+.book-content h2 {
+    margin: 1.5em 0 0.5em;
+    text-align: center;
+    font-size: 1.5em;
+    font-weight: bold;
+}
+.book-content blockquote, .book-content .poem {
+    margin: 1em 2em;
+    font-style: italic;
+    border-left: 3px solid #ccc;
+    padding-left: 1em;
+}
+.book-content {
+    font-size: 18px;
+    color: var(--text-color, #222);
+    background: var(--bg-color, #fff);
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+}
+/* ========================================
+   🔧 DARK THEME FIXES (добавлено для демо)
+   ======================================== */
+
+/* Карточки книг и обложки */
+body.dark .book-card {
+  background: #1e293b !important;
+  border-color: #475569 !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important;
+}
+body.dark .book-card:hover {
+  box-shadow: 0 6px 20px rgba(0,0,0,0.4) !important;
+}
+body.dark .book-cover {
+  background: #334155 !important;
+}
+body.dark .book-cover-placeholder {
+  background: linear-gradient(135deg, #334155, #475569) !important;
+  color: #94a3b8 !important;
+}
+body.dark .book-genre {
+  background: #4338ca !important;
+  color: #fff !important;
+}
+body.dark .book-info,
+body.dark .book-title,
+body.dark .book-author {
+  color: #e2e8f0 !important;
+}
+
+/* Фильтры и сортировка в каталоге */
+body.dark .filter-bar,
+body.dark .filter-group {
+  background: transparent !important;
+}
+body.dark .sort-dir-btn,
+body.dark .genre-btn {
+  background: #1e293b !important;
+  color: #e2e8f0 !important;
+  border-color: #475569 !important;
+}
+body.dark .genre-btn:hover,
+body.dark .genre-btn.active {
+  background: #4f46e5 !important;
+  color: #fff !important;
+  border-color: #4f46e5 !important;
+}
+
+/* Читалка: основные контейнеры */
+body.dark .reader-header,
+body.dark .reader-nav {
+  background: #1e293b !important;
+  border-color: #475569 !important;
+}
+body.dark .reader-page-info,
+body.dark .reader-nav button {
+  color: #94a3b8 !important;
+}
+body.dark .reader-nav button:disabled {
+  opacity: 0.5 !important;
+}
+
+/* Читалка: контент книги */
+body.dark .reader-content {
+  background: #0f172a !important;
+  color: #e2e8f0 !important;
+}
+body.dark .reader-content p,
+body.dark .reader-content h2,
+body.dark .reader-content h3 {
+  color: #e2e8f0 !important;
+}
+body.dark .reader-content blockquote,
+body.dark .reader-content .poem {
+  border-left-color: #64748b !important;
+  color: #cbd5e1 !important;
+}
+
+/* Инпуты в читалке (переход на страницу) */
+body.dark .reader-page-jump input {
+  background: #1e293b !important;
+  color: #e2e8f0 !important;
+  border-color: #475569 !important;
+}
+
+/* Библиотека пользователя */
+body.dark .library-item,
+body.dark .library-card {
+  background: #1e293b !important;
+  border-color: #475569 !important;
+}
+body.dark .library-item-cover {
+  background: #334155 !important;
+}
+body.dark .library-item-info h3,
+body.dark .library-item-info p {
+  color: #e2e8f0 !important;
+}
+/* 🔧 Dark theme: Subscription & Payment cards */
+body.dark .subscription-card,
+body.dark .plan-card,
+body.dark .pricing-card,
+body.dark .subscription-status,
+body.dark .payment-form,
+body.dark .form-group {
+  background: #1e293b !important;
+  border-color: #475569 !important;
+  color: #e2e8f0 !important;
+}
+body.dark .plan-card h3,
+body.dark .plan-card .price,
+body.dark .subscription-status h2,
+body.dark .subscription-status p,
+body.dark .payment-form label {
+  color: #e2e8f0 !important;
+}
+body.dark .payment-form input,
+body.dark .payment-form select {
+  background: #0f172a !important;
+  color: #e2e8f0 !important;
+  border-color: #475569 !important;
+}
+body.dark .plan-card.active,
+body.dark .plan-card:hover {
+  border-color: #6366f1 !important;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.3) !important;
+}
