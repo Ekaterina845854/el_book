@@ -1025,9 +1025,19 @@ body.dark .auth-link {
 body.dark .form-group label {
   color: #94a3b8 !important;
 }
+body.dark .btn-danger {
+  background: var(--danger) !important;
+  color: #fff !important;
+  border-color: var(--danger) !important;
+}
+body.dark .btn-danger:hover:not(:disabled) {
+  background: #dc2626 !important;
+  border-color: #dc2626 !important;
+}
 body.dark .btn-logout {
+  background: transparent !important;
   color: #f87171 !important;
-  border-color: #f87171 !important;
+  border: 2px solid #f87171 !important;
 }
 body.dark .btn-logout:hover:not(:disabled) {
   background: #f87171 !important;
