@@ -44,9 +44,9 @@ class BookViewerController {
         }
     }
 
-    // ── П7: GET /api/viewer/:bookId/download — saveTextBook (download) ────────
+    // ── П7: GET /api/viewer/:bookId/download — downloadBook() ────────────────
     // Успешный сценарий + Альт. 1 (место) + Альт. 2 (соединение) + Альт. 3 (отмена)
-    async saveBookText(req, res, next) {
+    async downloadBook(req, res, next) {
         try {
             const userId = req.user.id
             const {bookId} = req.params

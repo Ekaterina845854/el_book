@@ -14,6 +14,6 @@ router.post('/:bookId/progress', authMiddleware, bookViewerController.saveTextBo
 // ?confirm=undefined → предзапрос (размер файла)
 // ?confirm=true      → начать скачивание
 // ?confirm=false     → отмена (Альт. сц. 3)
-router.get('/:bookId/download', authMiddleware, checkSubscription, bookViewerController.saveBookText)
+router.get('/:bookId/download', authMiddleware, checkSubscription, bookViewerController.downloadBook)
 
 module.exports = router
